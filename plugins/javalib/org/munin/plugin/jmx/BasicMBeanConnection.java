@@ -1,4 +1,5 @@
 package org.munin.plugin.jmx;
+
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.util.Map;
@@ -12,13 +13,11 @@ import javax.management.remote.JMXServiceURL;
 
 public class BasicMBeanConnection {
 
-    public static MBeanServerConnection get(Config config) throws IOException, MalformedURLException
-    {
-		JMXServiceURL u = new JMXServiceURL("service:jmx:rmi:///jndi/rmi://" + config.getIp() + ":" + config.getPort()+ "/jmxrmi");
-        Map<String, Object> credentials = config.getConnectionCredentials();
-        JMXConnector c=JMXConnectorFactory.connect(u,credentials);
-        MBeanServerConnection connection=c.getMBeanServerConnection();
-        return (connection);
-    }
+  public static MBeanServerConnection get(Config config) throws IOException, MalformedURLException {
+    JMXServiceURL u = new JMXServiceURL(config.getUrl());
+    Map<String, Object> credentials = config.getConnectionCredentials();
+    JMXConnector c = JMXConnectorFactory.connect(u, credentials);
+    MBeanServerConnection connection = c.getMBeanServerConnection();
+    return (connection);
+  }
 }
-

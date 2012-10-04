@@ -19,6 +19,8 @@ Needs nc in path for autoconf.
   [jmx_*]
     env.ip 127.0.0.1
     env.port 5400
+    env.url if more is needed than ip and port
+    env.classpath for additional jars
     env.category jvm
     env.username monitorRole
     env.password SomethingSecret
@@ -90,6 +92,8 @@ JAVA_BIN=${JRE:-@@JAVARUN@@}
 
 ip=${ip:-127.0.0.1}
 port=${port:-5400}
+url=${url}
+classpath=${classpath}
 
 if [ "x$1" = "xsuggest" ] ; then
   echo MultigraphAll
@@ -141,4 +145,10 @@ if [ "x$jmxfunc" = "x" ] ; then
   exit 1
 fi
 
-ip=$ip port=$port $JAVA_BIN -cp $MUNIN_JAR $JAVA_OPTS org.munin.plugin.jmx.$jmxfunc $param $prefix
+CLASS_PATH="$MUNIN_JAR"
+JAVA_LIB_DIR=@@JAVALIBDIR@@
+for FILE in `echo "$classpath" | tr ':' ' '` ; do
+   CLASS_PATH="$CLASS_PATH:$JAVA_LIB_DIR/$FILE"
+done
+
+url=$url ip=$ip port=$port $JAVA_BIN -cp $CLASS_PATH $JAVA_OPTS org.munin.plugin.jmx.$jmxfunc $param $prefix

@@ -310,7 +310,8 @@ build-man-stamp:
 build-plugins-java: build/plugins/javalib/munin-jmx-plugins.jar
 
 build/plugins/javalib/munin-jmx-plugins.jar: $(CLASSFILES)
-	cd build/plugins/javalib && $(JAR) cf munin-jmx-plugins.jar org/munin/plugin/jmx
+	cp plugins/javalib/logging.properties build/plugins/javalib
+	cd build/plugins/javalib && $(JAR) cf munin-jmx-plugins.jar logging.properties org/munin/plugin/jmx
 
 build-java-stamp:
 	mkdir -p build/plugins/javalib

@@ -13,32 +13,30 @@ package org.munin.plugin.jmx;
  * the 4 pools expected by the 1.4-era plugins.
  */
 public enum LegacyPool {
-	SURVIVOR("Survivor", "survivor space"), EDEN("Eden", "eden space"), TENURED_GEN(
-			"TenuredGen", "old gen", "tenured gen"), PERM_GEN("PermGen",
-			"perm gen");
+  SURVIVOR("Survivor", "survivor space"), EDEN("Eden", "eden space"), TENURED_GEN("TenuredGen", "old gen",
+      "tenured gen"), PERM_GEN("PermGen", "perm gen");
 
-	private final String name;
-	private final String[] matchStrings;
+  private final String name;
+  private final String[] matchStrings;
 
-	private LegacyPool(final String name, final String... matchStrings) {
-		this.name = name;
-		this.matchStrings = matchStrings;
-	}
+  private LegacyPool(final String name, final String... matchStrings) {
+    this.name = name;
+    this.matchStrings = matchStrings;
+  }
 
-	public String getName() {
-		return name;
-	}
+  public String getName() {
+    return name;
+  }
 
-	public static LegacyPool getLegacyPool(final String poolName) {
-		String generalPoolName = poolName.toLowerCase().replaceFirst(
-				"^(cms|ps) ", "");
-		for (LegacyPool pool : values()) {
-			for (String matchString : pool.matchStrings) {
-				if (generalPoolName.equals(matchString)) {
-					return pool;
-				}
-			}
-		}
-		return null;
-	}
+  public static LegacyPool getLegacyPool(final String poolName) {
+    String generalPoolName = poolName.toLowerCase().replaceFirst("^(cms|ps) ", "");
+    for (LegacyPool pool : values()) {
+      for (String matchString : pool.matchStrings) {
+        if (generalPoolName.equals(matchString)) {
+          return pool;
+        }
+      }
+    }
+    return null;
+  }
 }
