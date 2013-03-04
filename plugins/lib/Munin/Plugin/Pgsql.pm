@@ -188,7 +188,7 @@ regardless of server version. The other form is an array, looking like this:
     "8.1", "SELECT 'query for 8.1 or earlier',... FROM ..."
   ]
  ]
-This array is parsed from top to bottom, so the entires must be in order of
+This array is parsed from top to bottom, so the entries must be in order of
 version number. The *last* value found where the version specified is higher
 than or equal to the version of the server will be used (yes, it counts
 backwards).
@@ -427,7 +427,7 @@ sub _connect() {
         $dbname = $self->{defaultdb}           if ($self->{defaultdb});
         $dbname = $self->wildcard_parameter(0) if ($self->{paramdatabase} && !defined($nowildcard));
         $dbname = $ENV{"PGDATABASE"}           if ($ENV{"PGDATABASE"});
-        $self->{dbh} = DBI->connect("DBI:Pg:dbname=$dbname");
+        $self->{dbh} = DBI->connect("DBI:Pg:dbname=$dbname", '', '', {pg_server_prepare => 0});
         unless ($self->{dbh}) {
             $self->{connecterror} = "$DBI::errstr";
             return 0;
@@ -478,7 +478,7 @@ sub get_version {
     my $r = $self->runquery("SELECT version()");
     my $v = $r->[0]->[0];
     die "Unable to detect PostgreSQL version\n"
-        unless ($v =~ /^PostgreSQL (\d+)\.(\d+)\.(\d+) on/);
+        unless ($v =~ /^PostgreSQL (\d+)\.(\d+)(\.\d+|devel) on/);
     $self->{detected_version} = "$1.$2";
 }
 

@@ -58,7 +58,9 @@ my $do_version     = 0;
 my @limit_hosts    = ();
 my @limit_services = ();
 my @limit_contacts = ();
+my @always_send    = ();
 my $stdout         = 0;
+my $force          = 0;
 my $force_run_as_root = 0;
 my %notes          = ();
 my $config;
@@ -86,6 +88,8 @@ sub limits_startup {
         "config=s"  => \$conffile,
         "debug!"    => \$DEBUG,
         "stdout!"   => \$stdout,
+        "force!"    => \$force,
+        "always-send=s" => \@always_send,
         "force-run-as-root!" => \$force_run_as_root,
         "version!"  => \$do_version,
         "help"      => \$do_usage
@@ -95,6 +99,8 @@ sub limits_startup {
     print_version_and_exit() if $do_version;
 
     exit_if_run_by_super_user() unless $force_run_as_root;
+
+    @always_send = qw{ok warning critical unknown} if $force;
 
     munin_readconfig_base($conffile);
     # XXX: check if it does actualy need that part
@@ -208,7 +214,15 @@ Options:
     --help		View this message.
     --debug		View debug messages.
     --stdout		Log to stdout as well as the log file.
-    --force		Send messages even if they shouldn't normally be sent.
+    --always-send <severity list>
+                        Send messages to contacts even if state has
+                        not changed since the last run. The list is a
+                        space or comma separated list of severities.
+                        Choose from one or more of \"critical\",
+                        \"warning\", \"unknown\" and \"ok\".
+    --force		Alias for \"--always-send ok,warning,critical,unknown\".
+                        Overrides --always-send command line, as well as the
+                        always_send contact configuration options.
     --service <service>	Limit notified services to <service>. Multiple 
     			--service options may be supplied.
     --host <host>	Limit notified hosts to <host>. Multiple --host 
@@ -311,10 +325,17 @@ sub process_service {
         my $fname   = munin_get_node_name($field);
         my $fpath   = munin_get_node_loc($field);
         my $onfield = munin_get_node($oldnotes, $fpath);
+	my $oldstate= '';
 
 	# Test directly here as get_limits is in truth recursive and
 	# that fools us when processing multigraphs.
 	next if (!defined($field->{warning}) and !defined($field->{critical}));
+
+	# get the old state if there is one, or leave it empty.
+	if ( defined($onfield) or
+	     defined($onfield->{"state"}) ) {
+	    $oldstate = $onfield->{"state"};
+	}
 
         my ($warn, $crit, $unknown_limit) = get_limits($field);
 
@@ -384,9 +405,7 @@ sub process_service {
                     : "Value is unknown.";
             my $num_unknowns;
 
-            if (   !defined $onfield
-                or !defined $onfield->{"state"}
-                or $onfield->{"state"} ne "unknown") {
+            if ( $oldstate ne "unknown") {
                 $hash->{'state_changed'} = 1;
             }
             else {
@@ -464,12 +483,8 @@ sub process_service {
                         . ") exceeded"
                 ));
 
-            if (   !defined $onfield
-                or !defined $onfield->{"state"}
-                or $onfield->{"state"} ne "critical") {
-
+            if ( $oldstate ne "critical") {
                 $hash->{'state_changed'} = 1;
-
             }
         }
         elsif ((defined($warn->[0]) and $value < $warn->[0])
@@ -491,19 +506,15 @@ sub process_service {
                         . ") exceeded"
                 ));
 
-            if (   !defined $onfield
-                or !defined $onfield->{"state"}
-                or $onfield->{"state"} ne "warning") {
-
+            if ( $oldstate ne "warning") {
                 $hash->{'state_changed'} = 1;
-
             }
         }
-        elsif (defined $onfield and defined $onfield->{"state"}) {
+        else {
             munin_set_var_loc(\%notes, [@$fpath, "state"], "ok");
             munin_set_var_loc(\%notes, [@$fpath, "ok"],    "OK");
 
-	    if ($onfield->{'state'} ne 'ok') {
+	    if ($oldstate ne 'ok') {
 		$hash->{'state_changed'} = 1;
 	    }
         }
@@ -631,8 +642,22 @@ sub generate_service_message {
             next;
         }
         my $obsess = 0;
-	my $always_send = munin_get($contactobj, "always_send");
-	foreach my $cas (split(/\s+/, lc $always_send)) {
+        my $always_send;
+
+        if (@always_send) {
+            # List of severities from command line argument
+            $always_send = \@always_send;
+        }
+        else {
+            # List of severities from contact configuration
+            my $always_send_config = munin_get( $contactobj, "always_send" );
+            my @always_send_config = ($always_send_config);
+            $always_send = \@always_send_config;
+        }
+
+        $always_send = validate_severities($always_send);
+
+        foreach my $cas ( @{$always_send} ) {
 	    if(defined($stats{$cas})) {
 		$obsess += scalar @{$stats{$cas}};
 	    }
@@ -789,6 +814,51 @@ sub message_expand {
     }
 
     return join('', @res);
+}
+
+=pod
+
+Get a list of severities, and return a sorted, lower cased, unique and
+validated list of severities.
+
+Expects and returns an array reference.
+
+If none of the severities given are on the allowed_severities list, it
+will return a reference to an empty array.
+
+=cut
+
+sub validate_severities {
+    my $severities_ref = shift;
+    my @severities     = @{$severities_ref};
+
+    my @allowed_severities = qw{ok warning critical unknown};
+
+    # Flatten, split on comma and whitespace, and lowercase
+    my @expanded_severities =
+      split( /[[:space:],]+/, lc( join( ',', @severities ) ) );
+
+    # Remove duplicates
+    my %seen;
+    my @unique_severities = grep { !$seen{$_}++ } @expanded_severities;
+
+    # Filter on allowed values
+    my %count;
+    my @validated_severities;
+    foreach my $severity ( @unique_severities, @allowed_severities ) {
+        $count{$severity}++;
+    }
+
+    foreach my $severity ( keys %count ) {
+        if ( $count{$severity} == 2 ) {
+            push @validated_severities, $severity;
+        }
+    }
+
+    # Sort the final list
+    my @sorted_severities = sort(@validated_severities);
+
+    return \@sorted_severities;
 }
 
 1;
