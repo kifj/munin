@@ -16,7 +16,7 @@ public abstract class AbstractGraphsProvider {
     try {
       LogManager.getLogManager().readConfiguration(getClass().getClassLoader().getResourceAsStream("logging.properties"));
     } catch (Exception e) {
-      e.printStackTrace();
+      e.printStackTrace(System.err);
     }
     if (config == null) {
       throw new IllegalArgumentException("config must not be null");
@@ -125,8 +125,8 @@ public abstract class AbstractGraphsProvider {
   }
 
   private static void runGraph(final AbstractGraphsProvider provider, Config config, String[] args) {
+    PrintWriter out = new PrintWriter(System.out);
     try {
-      PrintWriter out = new PrintWriter(System.out);
       if (args.length > 0 && args[0].equals("config")) {
         provider.printConfig(out);
         if (config.isDirtyConfg()) {
@@ -135,9 +135,10 @@ public abstract class AbstractGraphsProvider {
       } else {
         provider.printValues(out);
       }
-      out.flush();
     } catch (Exception e) {
       e.printStackTrace(System.err);
+    } finally {
+      out.flush();
     }
   }
 

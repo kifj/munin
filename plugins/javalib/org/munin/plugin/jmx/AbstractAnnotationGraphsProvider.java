@@ -113,7 +113,7 @@ public abstract class AbstractAnnotationGraphsProvider extends AbstractGraphsPro
       prepareValues();
     } catch (Exception e) {
       System.err.println("Failed to prepare values for class " + getClass() + ": " + e.getMessage());
-      e.printStackTrace();
+      e.printStackTrace(System.err);
     }
     for (AccessibleObject accessible : getFieldObjects()) {
       printFieldValue(out, accessible);
@@ -125,9 +125,12 @@ public abstract class AbstractAnnotationGraphsProvider extends AbstractGraphsPro
     try {
       Object value = getFieldValue(accessible);
       printFieldAttribute(out, fieldName, "value", value);
+    } catch (InvocationTargetException e) {
+      System.err.println("Failed to get value for field " + fieldName + ": " + e.getTargetException().getMessage());
+      printFieldAttribute(out, fieldName, "value", "-1");
     } catch (Exception e) {
       System.err.println("Failed to get value for field " + fieldName + ": " + e.getMessage());
-      e.printStackTrace();
+      printFieldAttribute(out, fieldName, "value", "-1");
     }
   }
 

@@ -33,7 +33,7 @@ public class MultigraphMemory extends AbstractMultiGraphsProvider {
     try {
       addPoolProviders(providers);
     } catch (Exception e) {
-      e.printStackTrace();
+      e.printStackTrace(System.err);
     }
 
     return providers;

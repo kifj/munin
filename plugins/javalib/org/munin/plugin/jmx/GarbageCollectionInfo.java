@@ -34,9 +34,9 @@ public abstract class GarbageCollectionInfo extends AbstractAnnotationGraphsProv
           collectors.add(collector);
         }
       } catch (IOException e) {
-        e.printStackTrace();
+        e.printStackTrace(System.err);
       } catch (MalformedObjectNameException e) {
-        e.printStackTrace();
+        e.printStackTrace(System.err);
       }
     }
     return collectors;
