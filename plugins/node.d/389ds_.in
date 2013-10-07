@@ -207,13 +207,18 @@ sub autoconf {
 # Determine action based on filename first
 (my $action = $0) =~ s/^.*389ds_([\w\d_]+)$/$1/;
 
+my $actions = (keys %ops);
+if ($action) {
+    $actions = ($action);
+}
+
 if ($ARGV[0]) {
     if ($ARGV[0] eq 'autoconf') {
 	autoconf();
     } elsif ($ARGV[0] eq "suggest") {
         print "$0\n";
     } elsif ($ARGV[0] eq "config") {
-	foreach my $action (keys %ops) {
+	foreach my $action ($actions) {
 	    print "multigraph 389ds_", $action, "\n";
 	    &config ($action);
 	}
@@ -234,11 +239,6 @@ if ($userdn ne '') {
 }
 if ($mesg->code) {
   die "Failed to bind: " . $mesg->error;
-}
-
-my $actions = (keys %ops);
-if ($action) {
-    $actions = ($action);
 }
 
 foreach my $action ($actions) {
